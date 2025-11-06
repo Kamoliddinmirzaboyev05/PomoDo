@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 
 interface Plan {
@@ -38,7 +38,7 @@ Notifications.setNotificationHandler({
 export default function PlansScreen() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [newPlan, setNewPlan] = useState('');
-  const [selectedTime, setSelectedTime] = useState<Date | null>(null);
+  const [selectedTime, setSelectedTime] = useState<Date>(new Date());
   const [isTimePickerVisible, setTimePickerVisibility] = useState(false);
   const [isAddingPlan, setIsAddingPlan] = useState(false);
 
@@ -114,30 +114,33 @@ export default function PlansScreen() {
     setTimePickerVisibility(false);
   };
 
-  const handleTimeConfirm = async (time: Date) => {
-    setSelectedTime(time);
-    hideTimePicker();
+  const handleTimeConfirm = async (event: any, time?: Date) => {
+    setTimePickerVisibility(false);
     
-    const plan: Plan = {
-      id: Date.now().toString(),
-      title: newPlan.trim(),
-      completed: false,
-      date: new Date().toLocaleDateString(),
-      time: time.toLocaleTimeString('en-US', { 
-        hour: '2-digit', 
-        minute: '2-digit',
-        hour12: false 
-      }),
-    };
+    if (time && event.type === 'set') {
+      setSelectedTime(time);
+      
+      const plan: Plan = {
+        id: Date.now().toString(),
+        title: newPlan.trim(),
+        completed: false,
+        date: new Date().toLocaleDateString(),
+        time: time.toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: false 
+        }),
+      };
 
-    // Bildirishnoma rejalashtirish
-    const notificationId = await scheduleNotification(plan);
-    plan.notificationId = notificationId;
+      // Bildirishnoma rejalashtirish
+      const notificationId = await scheduleNotification(plan);
+      plan.notificationId = notificationId;
 
-    setPlans([...plans, plan]);
-    setNewPlan('');
-    setSelectedTime(null);
-    setIsAddingPlan(false);
+      setPlans([...plans, plan]);
+      setNewPlan('');
+      setSelectedTime(new Date());
+      setIsAddingPlan(false);
+    }
   };
 
   const addPlanWithoutTime = () => {
@@ -293,14 +296,15 @@ export default function PlansScreen() {
         }
       />
 
-      <DateTimePickerModal
-        isVisible={isTimePickerVisible}
-        mode="time"
-        onConfirm={handleTimeConfirm}
-        onCancel={hideTimePicker}
-        is24Hour={true}
-        locale="en_GB"
-      />
+      {isTimePickerVisible && (
+        <DateTimePicker
+          value={selectedTime}
+          mode="time"
+          is24Hour={true}
+          display="default"
+          onChange={handleTimeConfirm}
+        />
+      )}
     </View>
   );
 }
@@ -341,16 +345,16 @@ const styles = StyleSheet.create({
   },
   addButton: {
     backgroundColor: '#007AFF',
-    borderRadius: 15,
-    width: 50,
-    height: 50,
+    borderRadius: 18,
+    width: 56,
+    height: 56,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#007AFF',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
   addingContainer: {
     backgroundColor: 'white',
@@ -392,38 +396,47 @@ const styles = StyleSheet.create({
   addingButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 12,
   },
   timeButton: {
-    backgroundColor: '#e3f2fd',
-    borderRadius: 12,
+    backgroundColor: '#007AFF',
+    borderRadius: 15,
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    marginRight: 10,
     justifyContent: 'center',
+    flex: 1,
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   timeButtonText: {
-    color: '#007AFF',
+    color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     marginLeft: 8,
   },
   noTimeButton: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 12,
+    backgroundColor: '#6c757d',
+    borderRadius: 15,
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 16,
     flex: 1,
-    marginLeft: 10,
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#6c757d',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   noTimeButtonText: {
-    color: '#666',
+    color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   list: {
     flex: 1,

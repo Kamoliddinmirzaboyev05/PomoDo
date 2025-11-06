@@ -13,19 +13,49 @@ import {
 } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { Audio } from 'expo-av';
-import * as DocumentPicker from 'expo-document-picker';
+
 import { Ionicons } from '@expo/vector-icons';
 
 type TimerPhase = 'work' | 'break';
 const { width } = Dimensions.get('window');
 
 const AUDIO_FILES = {
-  clock: { name: 'Soat tovushi', file: require('../sounds/Clock.mp3'), icon: 'time-outline' },
-  birds1: { name: 'Qushlar 1', file: require('../sounds/Birds sound 1.mp3'), icon: 'leaf-outline' },
-  birds2: { name: 'Qushlar 2', file: require('../sounds/Birds sound 2.mp3'), icon: 'flower-outline' },
-  rain1: { name: 'Yomg\'ir 1', file: require('../sounds/Rain 1.mp3'), icon: 'rainy-outline' },
-  rain2: { name: 'Yomg\'ir 2', file: require('../sounds/Rain 2.mp3'), icon: 'thunderstorm-outline' },
-  water: { name: 'Suv tovushi', file: require('../sounds/Water sound.mp3'), icon: 'water-outline' },
+  clock: { 
+    name: '🕐 Soat tovushi', 
+    file: require('../sounds/Clock.mp3'), 
+    icon: 'time-outline',
+    description: 'Klassik soat tik-tak tovushi'
+  },
+  birds1: { 
+    name: '🐦 Qushlar 1', 
+    file: require('../sounds/Birds sound 1.mp3'), 
+    icon: 'leaf-outline',
+    description: 'Tabiat ovozlari - qushlar sayroqi'
+  },
+  birds2: { 
+    name: '🕊️ Qushlar 2', 
+    file: require('../sounds/Birds sound 2.mp3'), 
+    icon: 'flower-outline',
+    description: 'Turli qushlarning ovozi'
+  },
+  rain1: { 
+    name: '🌧️ Yomg\'ir 1', 
+    file: require('../sounds/Rain 1.mp3'), 
+    icon: 'rainy-outline',
+    description: 'Tinch yomg\'ir tovushi'
+  },
+  rain2: { 
+    name: '⛈️ Yomg\'ir 2', 
+    file: require('../sounds/Rain 2.mp3'), 
+    icon: 'thunderstorm-outline',
+    description: 'Kuchli yomg\'ir ovozi'
+  },
+  water: { 
+    name: '💧 Suv tovushi', 
+    file: require('../sounds/Water sound.mp3'), 
+    icon: 'water-outline',
+    description: 'Oqayotgan suv ovozi'
+  },
 };
 
 const TIMER_SETTINGS = {
@@ -83,19 +113,31 @@ export default function PomodoroScreen() {
     if (!isAudioEnabled) return;
     
     try {
+      // Avvalgi tovushni to'xtatish
       if (tickSound) {
         await tickSound.stopAsync();
         await tickSound.unloadAsync();
+        setTickSound(null);
       }
 
       const audioFile = AUDIO_FILES[selectedAudio as keyof typeof AUDIO_FILES];
       if (audioFile) {
         const { sound } = await Audio.Sound.createAsync(audioFile.file, {
-          shouldPlay: true,
+          shouldPlay: false, // Avtomatik boshlamaslik
           isLooping: false,
-          volume: 0.3,
+          volume: 0.2,
         });
-        setTickSound(sound);
+        
+        // Qisqa tovush chiqarish (0.5 soniya)
+        await sound.playAsync();
+        setTimeout(async () => {
+          try {
+            await sound.stopAsync();
+            await sound.unloadAsync();
+          } catch (e) {
+            console.log('Sound cleanup error:', e);
+          }
+        }, 500);
       }
     } catch (error) {
       console.log('Audio play error:', error);
@@ -106,18 +148,32 @@ export default function PomodoroScreen() {
 
   const previewAudio = async (audioKey: string) => {
     try {
+      // Avvalgi preview tovushini to'xtatish
+      if (tickSound) {
+        await tickSound.stopAsync();
+        await tickSound.unloadAsync();
+        setTickSound(null);
+      }
+
       const audioFile = AUDIO_FILES[audioKey as keyof typeof AUDIO_FILES];
       if (audioFile) {
         const { sound } = await Audio.Sound.createAsync(audioFile.file, {
-          shouldPlay: true,
+          shouldPlay: false,
           isLooping: false,
-          volume: 0.5,
+          volume: 0.4,
         });
         
+        await sound.playAsync();
+        
+        // 3 soniya preview
         setTimeout(async () => {
-          await sound.stopAsync();
-          await sound.unloadAsync();
-        }, 2000); // 2 soniya preview
+          try {
+            await sound.stopAsync();
+            await sound.unloadAsync();
+          } catch (e) {
+            console.log('Preview cleanup error:', e);
+          }
+        }, 3000);
       }
     } catch (error) {
       console.log('Preview error:', error);
@@ -215,9 +271,7 @@ export default function PomodoroScreen() {
     setShowPlayButton(true);
   };
 
-  const toggleTimer = () => {
-    setIsRunning(!isRunning);
-  };
+
 
   const resetTimer = () => {
     setIsRunning(false);
@@ -435,7 +489,7 @@ export default function PomodoroScreen() {
           >
             <Ionicons name="musical-notes" size={20} color="white" />
             <Text style={styles.audioButtonText}>
-              {AUDIO_FILES[selectedAudio as keyof typeof AUDIO_FILES]?.name || 'Tovush'}
+              {AUDIO_FILES[selectedAudio as keyof typeof AUDIO_FILES]?.name.split(' ')[1] || 'Tovush'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -495,25 +549,46 @@ export default function PomodoroScreen() {
                         color={selectedAudio === key ? 'white' : '#007AFF'} 
                       />
                     </View>
-                    <Text style={[
-                      styles.audioItemText,
-                      selectedAudio === key && styles.audioItemTextSelected
-                    ]}>
-                      {audio.name}
-                    </Text>
+                    <View style={styles.audioTextContainer}>
+                      <Text style={[
+                        styles.audioItemText,
+                        selectedAudio === key && styles.audioItemTextSelected
+                      ]}>
+                        {audio.name}
+                      </Text>
+                      <Text style={[
+                        styles.audioDescription,
+                        selectedAudio === key && styles.audioDescriptionSelected
+                      ]}>
+                        {audio.description}
+                      </Text>
+                    </View>
                   </View>
                   
                   <TouchableOpacity
-                    style={styles.previewButton}
+                    style={[
+                      styles.previewButton,
+                      selectedAudio === key && styles.previewButtonSelected
+                    ]}
                     onPress={(e) => {
                       e.stopPropagation();
                       previewAudio(key);
                     }}
                   >
-                    <Ionicons name="play" size={16} color="#007AFF" />
+                    <Ionicons 
+                      name="play" 
+                      size={16} 
+                      color={selectedAudio === key ? 'white' : '#007AFF'} 
+                    />
                   </TouchableOpacity>
                 </TouchableOpacity>
               ))}
+              
+              <View style={styles.modalFooter}>
+                <Text style={styles.footerText}>
+                  💡 Preview tugmasini bosib tovushni tinglang
+                </Text>
+              </View>
             </ScrollView>
           </View>
         </View>
@@ -530,7 +605,9 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    paddingTop: 40,
+    paddingBottom: 30,
   },
   title: {
     fontSize: 28,
@@ -617,49 +694,62 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.3)',
   },
   timerText: {
-    fontSize: width * 0.12,
-    fontWeight: 'bold',
-    color: '#333',
+    fontSize: width * 0.13,
+    fontWeight: '800',
+    color: '#2c3e50',
     fontFamily: 'monospace',
+    letterSpacing: 2,
+    textShadowColor: 'rgba(0,0,0,0.1)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   phaseIndicator: {
-    fontSize: 14,
-    color: '#666',
-    marginTop: 8,
-    fontWeight: '500',
+    fontSize: 15,
+    color: '#7f8c8d',
+    marginTop: 12,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
   controls: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 15,
+    alignItems: 'center',
+    gap: 20,
+    marginVertical: 20,
   },
   controlButton: {
     paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 25,
+    paddingVertical: 16,
+    borderRadius: 30,
     minWidth: 120,
     alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 5,
   },
   playButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: '#27ae60',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   pauseButton: {
-    backgroundColor: '#FF9800',
+    backgroundColor: '#f39c12',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
   resetButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     borderWidth: 2,
-    borderColor: 'white',
+    borderColor: 'rgba(255,255,255,0.4)',
   },
   controlButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: 'white',
+    letterSpacing: 0.5,
   },
   stats: {
     flexDirection: 'row',
@@ -688,23 +778,25 @@ const styles = StyleSheet.create({
   audioControls: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 12,
-    marginBottom: 20,
+    alignItems: 'center',
+    gap: 15,
+    marginVertical: 15,
   },
   audioButton: {
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 20,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
     alignItems: 'center',
-    minWidth: 100,
+    justifyContent: 'center',
+    minWidth: 110,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.3)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3,
   },
   audioButtonDisabled: {
     backgroundColor: 'rgba(255,255,255,0.08)',
@@ -783,21 +875,51 @@ const styles = StyleSheet.create({
   audioIconSelected: {
     backgroundColor: '#007AFF',
   },
+  audioTextContainer: {
+    flex: 1,
+  },
   audioItemText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#2c3e50',
-    flex: 1,
+    marginBottom: 4,
   },
   audioItemTextSelected: {
     color: '#007AFF',
   },
+  audioDescription: {
+    fontSize: 13,
+    color: '#7f8c8d',
+    fontWeight: '500',
+  },
+  audioDescriptionSelected: {
+    color: '#5dade2',
+  },
   previewButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#e3f2fd',
     justifyContent: 'center',
     alignItems: 'center',
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  previewButtonSelected: {
+    backgroundColor: '#007AFF',
+  },
+  modalFooter: {
+    paddingVertical: 20,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#95a5a6',
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });
